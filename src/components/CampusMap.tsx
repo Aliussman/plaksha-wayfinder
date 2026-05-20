@@ -368,7 +368,7 @@ function MapBtn({
 }
 
 function Sidebar({
-  search, setSearch, filtered, from, to, setTo, setFrom, openBuilding,
+  search, setSearch, filtered, from, to, setTo, openBuilding,
   routeStyle, meters, walkTime,
 }: {
   search: string; setSearch: (v: string) => void; filtered: Building[];
