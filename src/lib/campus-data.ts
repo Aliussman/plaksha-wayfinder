@@ -1,145 +1,328 @@
+// Real Plaksha campus data — coordinates aligned with the satellite map
+// (src/assets/campus-satellite.png). All x/y are normalized 0-100.
+
+import bhartiImg from "@/assets/bharti.jpeg";
+import havellsImg from "@/assets/havells.jpeg";
+import libraryImg from "@/assets/library.jpeg";
+import diningImg from "@/assets/dining.jpeg";
+import auditoriumImg from "@/assets/auditorium.jpeg";
+import hostelImg from "@/assets/hostel.jpeg";
+import sportsImg from "@/assets/sports.jpeg";
+import gateImg from "@/assets/gate.jpeg";
+
+export type Category =
+  | "academic"
+  | "residence"
+  | "dining"
+  | "sports"
+  | "service"
+  | "entry";
+
 export type Building = {
   id: string;
   name: string;
   short: string;
-  category: "academic" | "residence" | "dining" | "sports" | "service" | "parking";
-  x: number; // %
-  y: number; // %
+  category: Category;
+  x: number;
+  y: number;
   color: string;
   description: string;
   facilities: string[];
   floors: number;
   departments?: string[];
-  image?: string;
+  image: string;
 };
 
 export const buildings: Building[] = [
   {
-    id: "bharti",
-    name: "Bharti Block",
-    short: "BB",
-    category: "academic",
-    x: 30,
-    y: 42,
-    color: "#1f5132",
+    id: "gate",
+    name: "Gate 01 · Main Entry",
+    short: "G1",
+    category: "entry",
+    x: 84,
+    y: 30,
+    color: "#0ea5e9",
     description:
-      "The primary academic block housing classrooms, labs and the makerspace where most undergraduate teaching happens.",
-    facilities: ["Academic Office", "Makerspace", "CTLC Studio", "Physics Lab", "Lecture Halls", "Cafe Lounge"],
-    floors: 4,
-    departments: ["Computer Science", "Physics", "Mathematics", "Design"],
+      "Primary campus entrance with security check, visitor desk and drop-off lane.",
+    facilities: ["Security Cabin", "Visitor Desk", "Drop-off Lane", "EV Charging"],
+    floors: 1,
+    image: gateImg,
   },
   {
     id: "havells",
-    name: "Havells Building",
-    short: "HB",
+    name: "Havells Research Building",
+    short: "HRB",
     category: "academic",
-    x: 52,
-    y: 36,
-    color: "#2d7a4a",
+    x: 60,
+    y: 38,
+    color: "#1f5132",
     description:
-      "Research-focused building with advanced labs, faculty offices and innovation studios.",
-    facilities: ["Research Labs", "Faculty Offices", "Seminar Rooms", "Innovation Studio"],
-    floors: 3,
-    departments: ["Robotics", "AI / ML", "Materials"],
+      "Flagship research tower housing advanced labs, faculty studios and the Plaksha innovation hub.",
+    facilities: ["Research Labs", "Faculty Offices", "Innovation Hub", "Seminar Rooms", "Roof Terrace"],
+    floors: 6,
+    departments: ["Robotics", "AI / ML", "Materials", "Climate Tech"],
+    image: havellsImg,
   },
   {
-    id: "boys-hostel",
-    name: "Boys Hostel",
-    short: "BH",
-    category: "residence",
-    x: 18,
-    y: 70,
-    color: "#3d8b56",
-    description: "Residence hall for male students with common rooms and study lounges.",
-    facilities: ["Single Rooms", "Common Room", "Laundry", "Study Pods", "Gaming Lounge"],
-    floors: 5,
+    id: "bharti",
+    name: "Bharti Academic Building",
+    short: "BAB",
+    category: "academic",
+    x: 49,
+    y: 47,
+    color: "#1f5132",
+    description:
+      "Primary academic tower with classrooms, makerspace, design studios and the CTLC.",
+    facilities: ["Lecture Halls", "Makerspace", "CTLC Studio", "Physics Lab", "Cafe Lounge"],
+    floors: 7,
+    departments: ["Computer Science", "Physics", "Mathematics", "Design"],
+    image: bhartiImg,
   },
   {
-    id: "girls-hostel",
-    name: "Girls Hostel",
-    short: "GH",
-    category: "residence",
-    x: 70,
-    y: 72,
-    color: "#3d8b56",
-    description: "Residence hall for female students with secure access and lounges.",
-    facilities: ["Single Rooms", "Common Room", "Laundry", "Study Pods", "Yoga Room"],
-    floors: 5,
-  },
-  {
-    id: "mess",
-    name: "Mess",
-    short: "MS",
+    id: "dining",
+    name: "Dining Block",
+    short: "DB",
     category: "dining",
-    x: 44,
-    y: 64,
+    x: 55,
+    y: 31,
     color: "#d4a017",
-    description: "Central dining hall serving all-day meals with vegetarian and non-veg counters.",
+    description:
+      "All-day dining hall with live counters, beverage bar and outdoor seating overlooking the lawn.",
     facilities: ["Main Hall", "Live Counter", "Beverage Bar", "Outdoor Seating"],
     floors: 2,
+    image: diningImg,
   },
   {
-    id: "sports",
-    name: "Sports Complex",
-    short: "SC",
-    category: "sports",
-    x: 82,
-    y: 50,
-    color: "#e07b39",
-    description: "Indoor + outdoor sports facilities including courts, gym and turf.",
-    facilities: ["Gym", "Basketball Court", "Football Turf", "Table Tennis", "Yoga Studio"],
-    floors: 2,
+    id: "library",
+    name: "Asha Mukul Agrawal Library",
+    short: "LIB",
+    category: "academic",
+    x: 70,
+    y: 52,
+    color: "#2d7a4a",
+    description:
+      "24/7 library with reading halls, group study pods, digital archive and a quiet roof deck.",
+    facilities: ["Reading Hall", "Group Rooms", "Digital Archive", "Cafe Corner"],
+    floors: 3,
+    image: libraryImg,
   },
   {
     id: "auditorium",
     name: "Auditorium",
-    short: "AU",
+    short: "AUD",
     category: "academic",
-    x: 60,
-    y: 22,
+    x: 45,
+    y: 70,
     color: "#7c4dff",
-    description: "500-seat auditorium for talks, performances and conferences.",
+    description:
+      "500-seat auditorium for talks, performances, conferences and student showcases.",
     facilities: ["Main Stage", "Green Room", "AV Booth", "Foyer"],
     floors: 1,
+    image: auditoriumImg,
   },
   {
-    id: "library",
-    name: "Library",
-    short: "LB",
-    category: "academic",
-    x: 38,
-    y: 22,
-    color: "#1f5132",
-    description: "24/7 library with quiet zones, group study rooms and digital archives.",
-    facilities: ["Reading Hall", "Group Rooms", "Digital Archive", "Cafe Corner"],
-    floors: 3,
+    id: "hostel1",
+    name: "Hostel 01",
+    short: "H1",
+    category: "residence",
+    x: 36,
+    y: 24,
+    color: "#3d8b56",
+    description:
+      "Residential block with single rooms, study lounges and common social areas.",
+    facilities: ["Single Rooms", "Common Room", "Laundry", "Study Pods", "Gaming Lounge"],
+    floors: 9,
+    image: hostelImg,
   },
   {
-    id: "parking",
-    name: "Parking",
-    short: "P",
-    category: "parking",
-    x: 12,
-    y: 28,
-    color: "#5a5a5a",
-    description: "Main visitor + faculty parking near the campus entrance.",
-    facilities: ["Visitor Bays", "EV Charging", "Two-wheeler Zone", "Drop-off Lane"],
+    id: "hostel2",
+    name: "Hostel 02",
+    short: "H2",
+    category: "residence",
+    x: 50,
+    y: 16,
+    color: "#3d8b56",
+    description:
+      "Residential block with secure entry, study pods and a rooftop deck.",
+    facilities: ["Single Rooms", "Common Room", "Laundry", "Study Pods", "Yoga Room"],
+    floors: 9,
+    image: hostelImg,
+  },
+  {
+    id: "hostel3",
+    name: "Hostel 03",
+    short: "H3",
+    category: "residence",
+    x: 63,
+    y: 18,
+    color: "#3d8b56",
+    description:
+      "Newest residential block with a podium-level lounge and direct path to the dining block.",
+    facilities: ["Single Rooms", "Common Room", "Laundry", "Study Pods"],
+    floors: 9,
+    image: hostelImg,
+  },
+  {
+    id: "football",
+    name: "Football Ground",
+    short: "FG",
+    category: "sports",
+    x: 22,
+    y: 44,
+    color: "#e07b39",
+    description:
+      "Full-size football turf bordered by a jogging track and floodlit for evening play.",
+    facilities: ["Football Turf", "Jogging Track", "Floodlights", "Spectator Lawn"],
     floors: 1,
+    image: sportsImg,
+  },
+  {
+    id: "courts",
+    name: "Sports Courts",
+    short: "SC",
+    category: "sports",
+    x: 18,
+    y: 72,
+    color: "#e07b39",
+    description:
+      "Outdoor basketball and tennis courts with shaded benches and skate ramp.",
+    facilities: ["Basketball Court", "Tennis Court", "Skate Ramp", "Benches"],
+    floors: 1,
+    image: sportsImg,
   },
 ];
 
-export const routeColors = [
-  "#1f5132", // forest
-  "#d4a017", // amber
-  "#7c4dff", // violet
-  "#e07b39", // orange
-  "#0ea5e9", // sky
+// Waypoints (routing-only nodes — sit on real roads/paths)
+export type Waypoint = { id: string; x: number; y: number };
+export const waypoints: Waypoint[] = [
+  { id: "w_gate", x: 82, y: 33 },
+  { id: "w_road", x: 70, y: 34 },
+  { id: "w_dining", x: 58, y: 32 },
+  { id: "w_havells", x: 60, y: 41 },
+  { id: "w_library", x: 70, y: 48 },
+  { id: "w_bharti_n", x: 50, y: 40 },
+  { id: "w_bharti_s", x: 48, y: 55 },
+  { id: "w_hostel_e", x: 60, y: 22 },
+  { id: "w_hostel_w", x: 42, y: 22 },
+  { id: "w_field_e", x: 35, y: 40 },
+  { id: "w_field_s", x: 30, y: 58 },
+  { id: "w_audi", x: 42, y: 68 },
+  { id: "w_courts", x: 22, y: 70 },
 ];
 
-// Walking speed: ~80m per % distance heuristic
+// Edge list (graph): connects buildings + waypoints along real walking paths
+const edges: [string, string][] = [
+  ["gate", "w_gate"],
+  ["w_gate", "w_road"],
+  ["w_road", "w_dining"],
+  ["w_road", "w_library"],
+  ["w_dining", "dining"],
+  ["w_dining", "w_havells"],
+  ["w_havells", "havells"],
+  ["w_havells", "w_bharti_n"],
+  ["w_bharti_n", "bharti"],
+  ["bharti", "w_bharti_s"],
+  ["w_library", "library"],
+  ["w_library", "w_bharti_s"],
+  ["w_bharti_s", "w_audi"],
+  ["w_audi", "auditorium"],
+  ["w_audi", "w_courts"],
+  ["w_courts", "courts"],
+  ["w_bharti_n", "w_field_e"],
+  ["w_field_e", "football"],
+  ["w_field_e", "w_hostel_w"],
+  ["w_field_e", "w_field_s"],
+  ["w_field_s", "w_courts"],
+  ["w_hostel_w", "hostel1"],
+  ["w_hostel_w", "hostel2"],
+  ["hostel2", "w_hostel_e"],
+  ["w_hostel_e", "hostel3"],
+  ["w_hostel_e", "w_dining"],
+];
+
+type Node = { id: string; x: number; y: number };
+const nodeMap: Record<string, Node> = {};
+for (const b of buildings) nodeMap[b.id] = { id: b.id, x: b.x, y: b.y };
+for (const w of waypoints) nodeMap[w.id] = w;
+
+const adj: Record<string, { to: string; w: number }[]> = {};
+for (const [a, b] of edges) {
+  const na = nodeMap[a];
+  const nb = nodeMap[b];
+  const d = Math.hypot(na.x - nb.x, na.y - nb.y);
+  (adj[a] ??= []).push({ to: b, w: d });
+  (adj[b] ??= []).push({ to: a, w: d });
+}
+
+// Dijkstra → returns ordered list of {x,y} along the route
+export function findRoute(fromId: string, toId: string): { x: number; y: number }[] {
+  if (!nodeMap[fromId] || !nodeMap[toId]) return [];
+  const dist: Record<string, number> = {};
+  const prev: Record<string, string | null> = {};
+  const visited = new Set<string>();
+  for (const id of Object.keys(nodeMap)) {
+    dist[id] = Infinity;
+    prev[id] = null;
+  }
+  dist[fromId] = 0;
+  const queue = new Set(Object.keys(nodeMap));
+  while (queue.size) {
+    let u: string | null = null;
+    let best = Infinity;
+    for (const id of queue) if (dist[id] < best) { best = dist[id]; u = id; }
+    if (!u || u === toId) break;
+    queue.delete(u);
+    visited.add(u);
+    for (const { to, w } of adj[u] ?? []) {
+      if (visited.has(to)) continue;
+      const alt = dist[u] + w;
+      if (alt < dist[to]) { dist[to] = alt; prev[to] = u; }
+    }
+  }
+  const path: string[] = [];
+  let cur: string | null = toId;
+  while (cur) { path.unshift(cur); cur = prev[cur]; }
+  if (path[0] !== fromId) return [];
+  return path.map((id) => ({ x: nodeMap[id].x, y: nodeMap[id].y }));
+}
+
+export function routeDistance(points: { x: number; y: number }[]): number {
+  let d = 0;
+  for (let i = 1; i < points.length; i++) {
+    d += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  }
+  // 1 unit ≈ 7 meters (campus diameter heuristic)
+  return Math.round(d * 7);
+}
+
 export function estimateWalkTime(from: Building, to: Building): number {
-  const dx = from.x - to.x;
-  const dy = from.y - to.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  return Math.max(1, Math.round(dist * 0.25));
+  const route = findRoute(from.id, to.id);
+  const meters = route.length ? routeDistance(route) : Math.hypot(from.x - to.x, from.y - to.y) * 7;
+  // walking 75 m/min
+  return Math.max(1, Math.round(meters / 75));
+}
+
+export const routeColors = ["#1d7afc", "#d4a017", "#22c55e", "#7c4dff", "#e07b39"];
+
+export function pathToSvgD(points: { x: number; y: number }[]): string {
+  if (!points.length) return "";
+  // Smooth Catmull–Rom → cubic Bezier for natural-looking walking routes
+  if (points.length < 3) {
+    return points
+      .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+      .join(" ");
+  }
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
 }

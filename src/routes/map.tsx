@@ -18,7 +18,7 @@ function MapPage() {
     <div className="h-screen flex flex-col">
       <Navbar />
       <div className="flex-1 pt-24">
-        <CampusMap initialFromId={from || "parking"} />
+        <CampusMap initialFromId={from || "gate"} />
       </div>
     </div>
   );
