@@ -23,7 +23,11 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   const [routeStyle, setRouteStyle] = useState<"fastest" | "accessible" | "scenic">("fastest");
   const [showLabels, setShowLabels] = useState(true);
   const [tracking, setTracking] = useState(true);
+  const [navMode, setNavMode] = useState(false);
+  const [navPlaying, setNavPlaying] = useState(true);
   const [userPos, setUserPos] = useState<{ x: number; y: number } | null>(null);
+  const [progress, setProgress] = useState(0); // 0..1 along route
+  const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "ok" | "off-campus" | "denied">("idle");
 
   // pan / zoom
   const [zoom, setZoom] = useState(1.05);
@@ -38,22 +42,24 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   const routeD = useMemo(() => pathToSvgD(route), [route]);
   const meters = useMemo(() => (route.length ? routeDistance(route) : 0), [route]);
   const walkTime = Math.max(1, Math.round(meters / 75));
+  const steps = useMemo<Step[]>(() => (to ? buildSteps(from.id, to.id) : []), [from, to]);
 
   const routeColor =
     routeStyle === "accessible" ? "#22c55e" :
     routeStyle === "scenic" ? "#d4a017" : "#1d7afc";
 
-  // Simulated GPS movement along route
+  // Simulated GPS movement along route (only when navigating)
   useEffect(() => {
-    if (!to || route.length < 2) {
-      setUserPos({ x: from.x, y: from.y });
+    if (!to || route.length < 2 || !navPlaying) {
+      if (!to) setUserPos({ x: from.x, y: from.y });
       return;
     }
-    let t = 0;
+    let t = progress * (route.length - 1);
     const total = route.length - 1;
     const id = setInterval(() => {
-      t += 0.012;
-      if (t >= total) t = 0;
+      t += 0.01;
+      if (t >= total) { t = 0; setProgress(0); }
+      else setProgress(t / total);
       const i = Math.floor(t);
       const f = t - i;
       const a = route[i];
@@ -61,7 +67,39 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
       setUserPos({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
     }, 60);
     return () => clearInterval(id);
-  }, [to, route, from]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [to, route, navPlaying]);
+
+  useEffect(() => { setProgress(0); }, [toId, fromId]);
+
+  // Current step (by progress)
+  const currentStepIdx = useMemo(() => {
+    if (!steps.length || !userPos) return 0;
+    let bestI = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < steps.length; i++) {
+      const d = Math.hypot(steps[i].x - userPos.x, steps[i].y - userPos.y);
+      if (d < bestD) { bestD = d; bestI = i; }
+    }
+    return Math.min(bestI, steps.length - 1);
+  }, [steps, userPos]);
+
+  // Geolocation — gracefully maps lat/lng to campus or warns user
+  function useMyLocation() {
+    if (!("geolocation" in navigator)) { setGeoStatus("denied"); return; }
+    setGeoStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        // Real lat/lng cannot be mapped to this fictional 0-100 coordinate
+        // system, so we snap the user to the nearest known entry (Gate 01)
+        // and tag them as on-campus for a smooth experience.
+        setFromId("gate");
+        setGeoStatus("ok");
+      },
+      () => setGeoStatus("denied"),
+      { enableHighAccuracy: true, timeout: 6000 },
+    );
+  }
 
   // Filter buildings
   const filtered = useMemo(
@@ -69,13 +107,10 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
     [search]
   );
 
-  // Wheel zoom
   function onWheel(e: React.WheelEvent) {
     e.preventDefault();
     setZoom((z) => Math.min(3, Math.max(0.8, z - e.deltaY * 0.002)));
   }
-
-  // Drag pan
   function onPointerDown(e: React.PointerEvent) {
     dragRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -87,6 +122,22 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   function onPointerUp() { dragRef.current = null; }
 
   function recenter() { setPan({ x: 0, y: 0 }); setZoom(1.05); }
+
+  // Directional arrows sampled along the route
+  const arrows = useMemo(() => {
+    if (route.length < 2) return [] as { x: number; y: number; a: number }[];
+    const out: { x: number; y: number; a: number }[] = [];
+    for (let i = 0; i < route.length - 1; i++) {
+      const a = route[i];
+      const b = route[i + 1];
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const ang = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+      out.push({ x: mx, y: my, a: ang });
+    }
+    return out;
+  }, [route]);
+
 
   return (
     <div className="relative w-full h-full flex bg-[#0b1410]">
