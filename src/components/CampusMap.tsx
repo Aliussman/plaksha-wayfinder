@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation2, X, ZoomIn, ZoomOut, Locate, Search, Clock, Footprints,
   Accessibility, MapPin, Compass, Crosshair, Layers, Route as RouteIcon,
-  ChevronRight,
+  ChevronRight, ArrowUp, ArrowUpLeft, ArrowUpRight, CornerUpLeft, CornerUpRight,
+  Flag, Play, Pause,
 } from "lucide-react";
 import {
   buildings, waypoints, type Building, findRoute, pathToSvgD, routeDistance,
+  buildSteps, type Step,
 } from "@/lib/campus-data";
 import satelliteImg from "@/assets/campus-satellite.png";
 import { cn } from "@/lib/utils";
