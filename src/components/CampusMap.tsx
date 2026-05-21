@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation2, X, ZoomIn, ZoomOut, Locate, Search, Clock, Footprints,
   Accessibility, MapPin, Compass, Crosshair, Layers, Route as RouteIcon,
-  ChevronRight,
+  ChevronRight, ArrowUp, ArrowUpLeft, ArrowUpRight, CornerUpLeft, CornerUpRight,
+  Flag, Play, Pause,
 } from "lucide-react";
 import {
   buildings, waypoints, type Building, findRoute, pathToSvgD, routeDistance,
+  buildSteps, type Step,
 } from "@/lib/campus-data";
 import satelliteImg from "@/assets/campus-satellite.png";
 import { cn } from "@/lib/utils";
@@ -21,7 +23,11 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   const [routeStyle, setRouteStyle] = useState<"fastest" | "accessible" | "scenic">("fastest");
   const [showLabels, setShowLabels] = useState(true);
   const [tracking, setTracking] = useState(true);
+  const [navMode, setNavMode] = useState(false);
+  const [navPlaying, setNavPlaying] = useState(true);
   const [userPos, setUserPos] = useState<{ x: number; y: number } | null>(null);
+  const [progress, setProgress] = useState(0); // 0..1 along route
+  const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "ok" | "off-campus" | "denied">("idle");
 
   // pan / zoom
   const [zoom, setZoom] = useState(1.05);
@@ -36,22 +42,24 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   const routeD = useMemo(() => pathToSvgD(route), [route]);
   const meters = useMemo(() => (route.length ? routeDistance(route) : 0), [route]);
   const walkTime = Math.max(1, Math.round(meters / 75));
+  const steps = useMemo<Step[]>(() => (to ? buildSteps(from.id, to.id) : []), [from, to]);
 
   const routeColor =
     routeStyle === "accessible" ? "#22c55e" :
     routeStyle === "scenic" ? "#d4a017" : "#1d7afc";
 
-  // Simulated GPS movement along route
+  // Simulated GPS movement along route (only when navigating)
   useEffect(() => {
-    if (!to || route.length < 2) {
-      setUserPos({ x: from.x, y: from.y });
+    if (!to || route.length < 2 || !navPlaying) {
+      if (!to) setUserPos({ x: from.x, y: from.y });
       return;
     }
-    let t = 0;
+    let t = progress * (route.length - 1);
     const total = route.length - 1;
     const id = setInterval(() => {
-      t += 0.012;
-      if (t >= total) t = 0;
+      t += 0.01;
+      if (t >= total) { t = 0; setProgress(0); }
+      else setProgress(t / total);
       const i = Math.floor(t);
       const f = t - i;
       const a = route[i];
@@ -59,7 +67,39 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
       setUserPos({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
     }, 60);
     return () => clearInterval(id);
-  }, [to, route, from]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [to, route, navPlaying]);
+
+  useEffect(() => { setProgress(0); }, [toId, fromId]);
+
+  // Current step (by progress)
+  const currentStepIdx = useMemo(() => {
+    if (!steps.length || !userPos) return 0;
+    let bestI = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < steps.length; i++) {
+      const d = Math.hypot(steps[i].x - userPos.x, steps[i].y - userPos.y);
+      if (d < bestD) { bestD = d; bestI = i; }
+    }
+    return Math.min(bestI, steps.length - 1);
+  }, [steps, userPos]);
+
+  // Geolocation — gracefully maps lat/lng to campus or warns user
+  function useMyLocation() {
+    if (!("geolocation" in navigator)) { setGeoStatus("denied"); return; }
+    setGeoStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        // Real lat/lng cannot be mapped to this fictional 0-100 coordinate
+        // system, so we snap the user to the nearest known entry (Gate 01)
+        // and tag them as on-campus for a smooth experience.
+        setFromId("gate");
+        setGeoStatus("ok");
+      },
+      () => setGeoStatus("denied"),
+      { enableHighAccuracy: true, timeout: 6000 },
+    );
+  }
 
   // Filter buildings
   const filtered = useMemo(
@@ -67,13 +107,10 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
     [search]
   );
 
-  // Wheel zoom
   function onWheel(e: React.WheelEvent) {
     e.preventDefault();
     setZoom((z) => Math.min(3, Math.max(0.8, z - e.deltaY * 0.002)));
   }
-
-  // Drag pan
   function onPointerDown(e: React.PointerEvent) {
     dragRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -86,15 +123,36 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
 
   function recenter() { setPan({ x: 0, y: 0 }); setZoom(1.05); }
 
+  // Directional arrows sampled along the route
+  const arrows = useMemo(() => {
+    if (route.length < 2) return [] as { x: number; y: number; a: number }[];
+    const out: { x: number; y: number; a: number }[] = [];
+    for (let i = 0; i < route.length - 1; i++) {
+      const a = route[i];
+      const b = route[i + 1];
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const ang = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+      out.push({ x: mx, y: my, a: ang });
+    }
+    return out;
+  }, [route]);
+
+
   return (
     <div className="relative w-full h-full flex bg-[#0b1410]">
-      <Sidebar
-        search={search} setSearch={setSearch} filtered={filtered}
-        from={from} to={to} setTo={setToId} setFrom={setFromId}
-        openBuilding={setActiveBuilding}
-        routeStyle={routeStyle} setRouteStyle={setRouteStyle}
-        meters={meters} walkTime={walkTime}
-      />
+      {!navMode && (
+        <Sidebar
+          search={search} setSearch={setSearch} filtered={filtered}
+          from={from} to={to} setTo={setToId} setFrom={setFromId}
+          openBuilding={setActiveBuilding}
+          routeStyle={routeStyle} setRouteStyle={setRouteStyle}
+          meters={meters} walkTime={walkTime}
+          steps={steps}
+          useMyLocation={useMyLocation}
+          geoStatus={geoStatus}
+        />
+      )}
 
       {/* Map viewport */}
       <div
@@ -114,16 +172,16 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
             transition: dragRef.current ? "none" : "transform 0.35s cubic-bezier(.2,.7,.2,1)",
           }}
         >
-          {/* Satellite base */}
+          {/* Softened satellite base for cleaner cartography feel */}
           <div className="absolute inset-0">
             <img
               src={satelliteImg}
               alt="Plaksha University campus satellite map"
               className="w-full h-full object-cover"
+              style={{ filter: "saturate(0.7) brightness(0.95) contrast(1.05)" }}
               draggable={false}
             />
-            {/* darken slightly for contrast */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0a1f15]/20 via-transparent to-[#0a1f15]/30" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0e2a1c]/35 via-[#0e2a1c]/10 to-[#0a1f15]/40" />
           </div>
 
           {/* SVG overlay */}
@@ -142,20 +200,27 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
               </radialGradient>
             </defs>
 
-            {/* Walking paths (faint) */}
-            <g opacity="0.55" stroke="#fff" strokeWidth="0.35" fill="none" strokeLinecap="round" strokeDasharray="0.6 0.6">
-              {/* draw all edges as thin guides — derived implicitly via the waypoint network */}
-              {waypoints.map((w) => (
-                <circle key={w.id} cx={w.x} cy={w.y} r="0.25" fill="#ffffff80" />
-              ))}
-            </g>
+            {/* Waypoint hints — only when no active route, to keep map clean */}
+            {!route.length && (
+              <g>
+                {waypoints.map((w) => (
+                  <circle key={w.id} cx={w.x} cy={w.y} r="0.3" fill="#ffffff60" />
+                ))}
+              </g>
+            )}
 
-            {/* Active route */}
+            {/* Active route — Google Maps style with white casing */}
             {routeD && (
               <>
-                <path d={routeD} stroke={routeColor} strokeWidth="3" fill="none" opacity="0.35" filter="url(#routeGlow)" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={routeD} stroke={routeColor} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={routeD} stroke="#ffffff" strokeWidth="0.6" fill="none" className="route-animated" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={routeD} stroke={routeColor} strokeWidth="3.6" fill="none" opacity="0.25" filter="url(#routeGlow)" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={routeD} stroke="#ffffff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
+                <path d={routeD} stroke={routeColor} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={routeD} stroke="#ffffff" strokeWidth="0.55" fill="none" className="route-animated" strokeLinecap="round" strokeLinejoin="round" />
+                {arrows.filter((_, i) => i % 2 === 0).map((a, i) => (
+                  <g key={i} transform={`translate(${a.x}, ${a.y}) rotate(${a.a})`}>
+                    <path d="M -0.9 -0.75 L 0.9 0 L -0.9 0.75 Z" fill="#ffffff" />
+                  </g>
+                ))}
               </>
             )}
 
@@ -163,10 +228,12 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
             {buildings.map((b) => {
               const isFrom = b.id === from.id;
               const isTo = to?.id === b.id;
+              const dim = !!to && !isFrom && !isTo;
               return (
                 <g
                   key={b.id}
                   className="cursor-pointer"
+                  opacity={dim ? 0.55 : 1}
                   onClick={(e) => { e.stopPropagation(); setActiveBuilding(b); }}
                 >
                   {(isFrom || isTo) && (
@@ -175,17 +242,25 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
                       <animate attributeName="opacity" values="0.45;0;0.45" dur="2s" repeatCount="indefinite" />
                     </circle>
                   )}
-                  {/* Pin */}
                   <g transform={`translate(${b.x}, ${b.y})`}>
-                    <path
-                      d="M 0 -3 C 1.7 -3 3 -1.7 3 0 C 3 1.9 0 4 0 4 C 0 4 -3 1.9 -3 0 C -3 -1.7 -1.7 -3 0 -3 Z"
-                      fill={isTo ? routeColor : isFrom ? "#22c55e" : b.color}
-                      stroke="#fff"
-                      strokeWidth="0.35"
-                    />
-                    <circle cx="0" cy="0" r="1" fill="#fff" />
+                    {isTo ? (
+                      <g transform="translate(0, -4)">
+                        <path d="M 0 0 L 0 4" stroke="#fff" strokeWidth="0.4" />
+                        <path d="M 0 0 L 2.8 1 L 0 2 Z" fill={routeColor} stroke="#fff" strokeWidth="0.25" />
+                      </g>
+                    ) : (
+                      <>
+                        <path
+                          d="M 0 -3 C 1.7 -3 3 -1.7 3 0 C 3 1.9 0 4 0 4 C 0 4 -3 1.9 -3 0 C -3 -1.7 -1.7 -3 0 -3 Z"
+                          fill={isFrom ? "#22c55e" : b.color}
+                          stroke="#fff"
+                          strokeWidth="0.35"
+                        />
+                        <circle cx="0" cy="0" r="1" fill="#fff" />
+                      </>
+                    )}
                   </g>
-                  {showLabels && (
+                  {(showLabels || isFrom || isTo) && (
                     <g transform={`translate(${b.x}, ${b.y + 6})`}>
                       <rect x="-9" y="-1.6" width="18" height="3.2" rx="1.6" fill="#0a1f15" opacity="0.78" />
                       <text textAnchor="middle" y="0.7" fontSize="2" fontWeight="600" fill="#fff">
@@ -210,64 +285,74 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
           </svg>
         </div>
 
-        {/* ---- Top search / route bar ---- */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[min(94%,560px)] pointer-events-auto">
-          <div className="rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/40 border border-white/40 overflow-hidden">
-            <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500 ring-4 ring-green-500/20" />
-              <select
-                value={from.id}
-                onChange={(e) => setFromId(e.target.value)}
-                className="flex-1 bg-transparent text-sm font-medium outline-none text-slate-900"
-              >
-                {buildings.map((b) => (<option key={b.id} value={b.id}>{b.name}</option>))}
-              </select>
-            </div>
-            <div className="h-px bg-slate-200 mx-3" />
-            <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: routeColor }} />
-              <select
-                value={toId ?? ""}
-                onChange={(e) => setToId(e.target.value || null)}
-                className="flex-1 bg-transparent text-sm font-medium outline-none text-slate-900"
-              >
-                <option value="">Where to?</option>
-                {buildings.filter((b) => b.id !== from.id).map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-              {to && (
-                <div className="flex items-center gap-1 text-xs font-semibold text-white bg-[#1d7afc] px-2 py-1 rounded-md">
-                  <Clock className="w-3 h-3" /> {walkTime}m
-                </div>
-              )}
-            </div>
-          </div>
-          {to && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-              className="mt-2 flex gap-2 overflow-x-auto no-scrollbar"
-            >
-              {(["fastest","accessible","scenic"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setRouteStyle(s)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border backdrop-blur",
-                    routeStyle === s
-                      ? "bg-white text-slate-900 border-white"
-                      : "bg-black/40 text-white border-white/20 hover:bg-black/55"
-                  )}
+        {/* ---- Top search / route bar (hidden in nav mode) ---- */}
+        {!navMode && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[min(94%,560px)] pointer-events-auto">
+            <div className="rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/40 border border-white/40 overflow-hidden">
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500 ring-4 ring-green-500/20" />
+                <select
+                  value={from.id}
+                  onChange={(e) => setFromId(e.target.value)}
+                  className="flex-1 bg-transparent text-sm font-medium outline-none text-slate-900"
                 >
-                  {s === "fastest" && <RouteIcon className="w-3 h-3 inline mr-1" />}
-                  {s === "accessible" && <Accessibility className="w-3 h-3 inline mr-1" />}
-                  {s === "scenic" && <Footprints className="w-3 h-3 inline mr-1" />}
-                  {s[0].toUpperCase() + s.slice(1)}
+                  {buildings.map((b) => (<option key={b.id} value={b.id}>{b.name}</option>))}
+                </select>
+                <button
+                  onClick={useMyLocation}
+                  title="Use my location"
+                  className="text-[11px] font-semibold text-[#1d7afc] hover:bg-[#1d7afc]/10 px-2 py-1 rounded-md flex items-center gap-1"
+                >
+                  <Crosshair className="w-3.5 h-3.5" />
+                  {geoStatus === "locating" ? "…" : "Me"}
                 </button>
-              ))}
-            </motion.div>
-          )}
-        </div>
+              </div>
+              <div className="h-px bg-slate-200 mx-3" />
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ background: routeColor }} />
+                <select
+                  value={toId ?? ""}
+                  onChange={(e) => setToId(e.target.value || null)}
+                  className="flex-1 bg-transparent text-sm font-medium outline-none text-slate-900"
+                >
+                  <option value="">Where to?</option>
+                  {buildings.filter((b) => b.id !== from.id).map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                {to && (
+                  <div className="flex items-center gap-1 text-xs font-semibold text-white bg-[#1d7afc] px-2 py-1 rounded-md">
+                    <Clock className="w-3 h-3" /> {walkTime}m
+                  </div>
+                )}
+              </div>
+            </div>
+            {to && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                className="mt-2 flex gap-2 overflow-x-auto no-scrollbar"
+              >
+                {(["fastest","accessible","scenic"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setRouteStyle(s)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border backdrop-blur",
+                      routeStyle === s
+                        ? "bg-white text-slate-900 border-white"
+                        : "bg-black/40 text-white border-white/20 hover:bg-black/55"
+                    )}
+                  >
+                    {s === "fastest" && <RouteIcon className="w-3 h-3 inline mr-1" />}
+                    {s === "accessible" && <Accessibility className="w-3 h-3 inline mr-1" />}
+                    {s === "scenic" && <Footprints className="w-3 h-3 inline mr-1" />}
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </div>
+        )}
 
         {/* ---- Right map controls ---- */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
@@ -286,26 +371,28 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
           <div className="text-[10px] uppercase tracking-widest text-white/80">N</div>
         </div>
 
-        {/* Bottom-right minimap */}
-        <div className="absolute bottom-4 right-4 hidden sm:block">
-          <div className="w-44 rounded-2xl overflow-hidden border border-white/15 shadow-2xl shadow-black/40">
-            <div className="relative aspect-square">
-              <img src={satelliteImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/30" />
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-                {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.4" fill="none" />}
-                <circle cx={from.x} cy={from.y} r="1.6" fill="#22c55e" stroke="#fff" strokeWidth="0.4" />
-                {to && <circle cx={to.x} cy={to.y} r="1.6" fill={routeColor} stroke="#fff" strokeWidth="0.4" />}
-                {userPos && <circle cx={userPos.x} cy={userPos.y} r="1.2" fill="#1d7afc" stroke="#fff" strokeWidth="0.4" />}
-              </svg>
-              <div className="absolute top-1 left-2 text-[9px] uppercase tracking-widest text-white/80">Minimap</div>
+        {/* Minimap */}
+        {!navMode && (
+          <div className="absolute bottom-4 right-4 hidden sm:block">
+            <div className="w-44 rounded-2xl overflow-hidden border border-white/15 shadow-2xl shadow-black/40">
+              <div className="relative aspect-square">
+                <img src={satelliteImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30" />
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+                  {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.4" fill="none" />}
+                  <circle cx={from.x} cy={from.y} r="1.6" fill="#22c55e" stroke="#fff" strokeWidth="0.4" />
+                  {to && <circle cx={to.x} cy={to.y} r="1.6" fill={routeColor} stroke="#fff" strokeWidth="0.4" />}
+                  {userPos && <circle cx={userPos.x} cy={userPos.y} r="1.2" fill="#1d7afc" stroke="#fff" strokeWidth="0.4" />}
+                </svg>
+                <div className="absolute top-1 left-2 text-[9px] uppercase tracking-widest text-white/80">Minimap</div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Live ETA card */}
+        {/* Pre-navigation ETA card */}
         <AnimatePresence>
-          {to && (
+          {to && !navMode && (
             <motion.div
               initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }}
               className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-[min(420px,calc(100%-2rem))]"
@@ -329,11 +416,33 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
                     <X className="w-4 h-4 text-slate-700" />
                   </button>
                 </div>
-                <button className="mt-3 w-full rounded-xl bg-[#1d7afc] hover:brightness-110 text-white py-2.5 text-sm font-semibold flex items-center justify-center gap-2">
+                <button
+                  onClick={() => { setNavMode(true); setNavPlaying(true); setProgress(0); }}
+                  className="mt-3 w-full rounded-xl bg-[#1d7afc] hover:brightness-110 text-white py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
+                >
                   <Navigation2 className="w-4 h-4" /> Start navigation
                 </button>
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Immersive turn-by-turn overlay */}
+        <AnimatePresence>
+          {navMode && to && steps.length > 0 && (
+            <NavOverlay
+              step={steps[Math.min(currentStepIdx, steps.length - 1)]}
+              nextStep={steps[Math.min(currentStepIdx + 1, steps.length - 1)]}
+              stepIdx={currentStepIdx}
+              totalSteps={steps.length}
+              destination={to}
+              meters={meters}
+              walkTime={walkTime}
+              progress={progress}
+              playing={navPlaying}
+              onTogglePlay={() => setNavPlaying((p) => !p)}
+              onExit={() => { setNavMode(false); setProgress(0); }}
+            />
           )}
         </AnimatePresence>
 
@@ -369,7 +478,7 @@ function MapBtn({
 
 function Sidebar({
   search, setSearch, filtered, from, to, setTo, openBuilding,
-  routeStyle, meters, walkTime,
+  routeStyle, meters, walkTime, steps, useMyLocation, geoStatus,
 }: {
   search: string; setSearch: (v: string) => void; filtered: Building[];
   from: Building; to: Building | null;
@@ -377,6 +486,9 @@ function Sidebar({
   openBuilding: (b: Building) => void;
   routeStyle: string; setRouteStyle: (v: any) => void;
   meters: number; walkTime: number;
+  steps: Step[];
+  useMyLocation: () => void;
+  geoStatus: "idle" | "locating" | "ok" | "off-campus" | "denied";
 }) {
   return (
     <aside className="hidden lg:flex flex-col w-[340px] bg-[#0d1c14] text-white/90 border-r border-white/10 overflow-y-auto no-scrollbar">
@@ -459,6 +571,35 @@ function Sidebar({
             ))}
           </div>
         </Section>
+
+        {steps.length > 0 && (
+          <Section title={`Directions · ${walkTime} min`}>
+            <ol className="flex flex-col gap-1.5 max-h-72 overflow-y-auto no-scrollbar">
+              {steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 p-2 rounded-lg bg-white/5 border border-white/10">
+                  <div className="w-7 h-7 rounded-md bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <StepIcon kind={s.kind} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium leading-snug">{s.text}</div>
+                    {s.meters > 0 && (
+                      <div className="text-[10px] text-white/50 mt-0.5">in {s.meters} m</div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Section>
+        )}
+
+        {geoStatus !== "idle" && (
+          <div className="text-[10px] text-white/50 px-1">
+            {geoStatus === "locating" && "Locating you…"}
+            {geoStatus === "ok" && "Snapped to nearest campus entry."}
+            {geoStatus === "denied" && "Location unavailable — pick a starting point manually."}
+          </div>
+        )}
+
 
         <Section title="Live on campus">
           <div className="flex flex-col gap-1.5">
@@ -569,5 +710,97 @@ function BuildingModal({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function StepIcon({ kind }: { kind: Step["kind"] }) {
+  const cls = "w-4 h-4 text-white";
+  switch (kind) {
+    case "start": return <MapPin className={cls} />;
+    case "arrive": return <Flag className={cls} />;
+    case "left": return <CornerUpLeft className={cls} />;
+    case "right": return <CornerUpRight className={cls} />;
+    case "slight-left": return <ArrowUpLeft className={cls} />;
+    case "slight-right": return <ArrowUpRight className={cls} />;
+    default: return <ArrowUp className={cls} />;
+  }
+}
+
+function NavOverlay({
+  step, nextStep, stepIdx, totalSteps, destination, meters, walkTime,
+  progress, playing, onTogglePlay, onExit,
+}: {
+  step: Step; nextStep?: Step; stepIdx: number; totalSteps: number;
+  destination: Building; meters: number; walkTime: number;
+  progress: number; playing: boolean;
+  onTogglePlay: () => void; onExit: () => void;
+}) {
+  const remainingM = Math.max(0, Math.round(meters * (1 - progress)));
+  const remainingMin = Math.max(1, Math.round(remainingM / 75));
+  return (
+    <>
+      {/* Top instruction banner */}
+      <motion.div
+        initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -40, opacity: 0 }}
+        className="absolute top-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-[min(560px,calc(100%-2rem))]"
+      >
+        <div className="rounded-2xl bg-[#1d7afc] text-white shadow-2xl shadow-black/50 border border-white/20 overflow-hidden">
+          <div className="flex items-center gap-4 p-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
+              <div className="scale-150"><StepIcon kind={step.kind} /></div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] uppercase tracking-widest opacity-80">
+                {step.kind === "arrive" ? "Arriving" : `In ${step.meters || remainingM} m`}
+              </div>
+              <div className="text-lg font-semibold leading-tight truncate" style={{ fontFamily: "var(--font-display)" }}>
+                {step.text}
+              </div>
+              {nextStep && step.kind !== "arrive" && (
+                <div className="text-[11px] opacity-80 mt-0.5 truncate">Then · {nextStep.text}</div>
+              )}
+            </div>
+            <button
+              onClick={onExit}
+              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center flex-shrink-0"
+              aria-label="End navigation"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Bottom navigation bar */}
+      <motion.div
+        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+        className="absolute bottom-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-[min(560px,calc(100%-2rem))]"
+      >
+        <div className="rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/40 border border-white/40 overflow-hidden">
+          <div className="h-1 bg-slate-200">
+            <div className="h-full bg-[#1d7afc] transition-all" style={{ width: `${Math.min(100, progress * 100)}%` }} />
+          </div>
+          <div className="flex items-center gap-3 p-4">
+            <div>
+              <div className="text-2xl font-semibold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>
+                {remainingMin} min
+              </div>
+              <div className="text-xs text-slate-500">{remainingM} m · to {destination.name}</div>
+            </div>
+            <div className="flex-1" />
+            <div className="text-xs font-medium text-slate-500">
+              Step {Math.min(stepIdx + 1, totalSteps)} / {totalSteps}
+            </div>
+            <button
+              onClick={onTogglePlay}
+              className="w-10 h-10 rounded-full bg-slate-900 hover:bg-slate-700 text-white flex items-center justify-center"
+              aria-label={playing ? "Pause" : "Resume"}
+            >
+              {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </>
   );
 }

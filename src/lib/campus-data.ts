@@ -254,8 +254,8 @@ for (const [a, b] of edges) {
   (adj[b] ??= []).push({ to: a, w: d });
 }
 
-// Dijkstra → returns ordered list of {x,y} along the route
-export function findRoute(fromId: string, toId: string): { x: number; y: number }[] {
+// Dijkstra → ordered list of node ids
+export function findRouteIds(fromId: string, toId: string): string[] {
   if (!nodeMap[fromId] || !nodeMap[toId]) return [];
   const dist: Record<string, number> = {};
   const prev: Record<string, string | null> = {};
@@ -283,7 +283,84 @@ export function findRoute(fromId: string, toId: string): { x: number; y: number 
   let cur: string | null = toId;
   while (cur) { path.unshift(cur); cur = prev[cur]; }
   if (path[0] !== fromId) return [];
-  return path.map((id) => ({ x: nodeMap[id].x, y: nodeMap[id].y }));
+  return path;
+}
+
+export function findRoute(fromId: string, toId: string): { x: number; y: number }[] {
+  return findRouteIds(fromId, toId).map((id) => ({ x: nodeMap[id].x, y: nodeMap[id].y }));
+}
+
+// Turn-by-turn step generator (Google Maps-style)
+export type Step = {
+  kind: "start" | "straight" | "left" | "right" | "slight-left" | "slight-right" | "arrive";
+  text: string;
+  meters: number;
+  x: number;
+  y: number;
+};
+
+function nearestBuildingName(x: number, y: number): string | null {
+  let best: Building | null = null;
+  let bestD = Infinity;
+  for (const b of buildings) {
+    const d = Math.hypot(b.x - x, b.y - y);
+    if (d < bestD) { bestD = d; best = b; }
+  }
+  return best && bestD < 12 ? best.name.replace(/\s·.*$/, "") : null;
+}
+
+export function buildSteps(fromId: string, toId: string): Step[] {
+  const ids = findRouteIds(fromId, toId);
+  if (ids.length < 2) return [];
+  const pts = ids.map((id) => nodeMap[id]);
+  const fromBldg = buildings.find((b) => b.id === fromId);
+  const toBldg = buildings.find((b) => b.id === toId);
+  const steps: Step[] = [{
+    kind: "start",
+    text: `Head out from ${fromBldg?.name ?? "your location"}`,
+    meters: 0,
+    x: pts[0].x,
+    y: pts[0].y,
+  }];
+  let segMeters = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const cur = pts[i];
+    segMeters += Math.hypot(cur.x - prev.x, cur.y - prev.y) * 7;
+    if (i === pts.length - 1) {
+      steps.push({
+        kind: "arrive",
+        text: `Arrive at ${toBldg?.name ?? "destination"}`,
+        meters: Math.round(segMeters),
+        x: cur.x,
+        y: cur.y,
+      });
+      break;
+    }
+    const next = pts[i + 1];
+    const a1 = Math.atan2(cur.y - prev.y, cur.x - prev.x);
+    const a2 = Math.atan2(next.y - cur.y, next.x - cur.x);
+    let diff = ((a2 - a1) * 180) / Math.PI;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    let kind: Step["kind"] = "straight";
+    let verb = "Continue straight";
+    if (diff > 45) { kind = "right"; verb = "Turn right"; }
+    else if (diff > 18) { kind = "slight-right"; verb = "Bear right"; }
+    else if (diff < -45) { kind = "left"; verb = "Turn left"; }
+    else if (diff < -18) { kind = "slight-left"; verb = "Bear left"; }
+    if (kind === "straight") continue;
+    const landmark = nearestBuildingName(cur.x, cur.y);
+    steps.push({
+      kind,
+      text: landmark ? `${verb} near ${landmark}` : verb,
+      meters: Math.round(segMeters),
+      x: cur.x,
+      y: cur.y,
+    });
+    segMeters = 0;
+  }
+  return steps;
 }
 
 export function routeDistance(points: { x: number; y: number }[]): number {
