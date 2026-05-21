@@ -572,6 +572,35 @@ function Sidebar({
           </div>
         </Section>
 
+        {steps.length > 0 && (
+          <Section title={`Directions · ${walkTime} min`}>
+            <ol className="flex flex-col gap-1.5 max-h-72 overflow-y-auto no-scrollbar">
+              {steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 p-2 rounded-lg bg-white/5 border border-white/10">
+                  <div className="w-7 h-7 rounded-md bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <StepIcon kind={s.kind} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium leading-snug">{s.text}</div>
+                    {s.meters > 0 && (
+                      <div className="text-[10px] text-white/50 mt-0.5">in {s.meters} m</div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Section>
+        )}
+
+        {geoStatus !== "idle" && (
+          <div className="text-[10px] text-white/50 px-1">
+            {geoStatus === "locating" && "Locating you…"}
+            {geoStatus === "ok" && "Snapped to nearest campus entry."}
+            {geoStatus === "denied" && "Location unavailable — pick a starting point manually."}
+          </div>
+        )}
+
+
         <Section title="Live on campus">
           <div className="flex flex-col gap-1.5">
             {[
