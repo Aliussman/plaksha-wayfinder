@@ -712,3 +712,95 @@ function BuildingModal({
     </AnimatePresence>
   );
 }
+
+function StepIcon({ kind }: { kind: Step["kind"] }) {
+  const cls = "w-4 h-4 text-white";
+  switch (kind) {
+    case "start": return <MapPin className={cls} />;
+    case "arrive": return <Flag className={cls} />;
+    case "left": return <CornerUpLeft className={cls} />;
+    case "right": return <CornerUpRight className={cls} />;
+    case "slight-left": return <ArrowUpLeft className={cls} />;
+    case "slight-right": return <ArrowUpRight className={cls} />;
+    default: return <ArrowUp className={cls} />;
+  }
+}
+
+function NavOverlay({
+  step, nextStep, stepIdx, totalSteps, destination, meters, walkTime,
+  progress, playing, onTogglePlay, onExit,
+}: {
+  step: Step; nextStep?: Step; stepIdx: number; totalSteps: number;
+  destination: Building; meters: number; walkTime: number;
+  progress: number; playing: boolean;
+  onTogglePlay: () => void; onExit: () => void;
+}) {
+  const remainingM = Math.max(0, Math.round(meters * (1 - progress)));
+  const remainingMin = Math.max(1, Math.round(remainingM / 75));
+  return (
+    <>
+      {/* Top instruction banner */}
+      <motion.div
+        initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -40, opacity: 0 }}
+        className="absolute top-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-[min(560px,calc(100%-2rem))]"
+      >
+        <div className="rounded-2xl bg-[#1d7afc] text-white shadow-2xl shadow-black/50 border border-white/20 overflow-hidden">
+          <div className="flex items-center gap-4 p-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
+              <div className="scale-150"><StepIcon kind={step.kind} /></div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] uppercase tracking-widest opacity-80">
+                {step.kind === "arrive" ? "Arriving" : `In ${step.meters || remainingM} m`}
+              </div>
+              <div className="text-lg font-semibold leading-tight truncate" style={{ fontFamily: "var(--font-display)" }}>
+                {step.text}
+              </div>
+              {nextStep && step.kind !== "arrive" && (
+                <div className="text-[11px] opacity-80 mt-0.5 truncate">Then · {nextStep.text}</div>
+              )}
+            </div>
+            <button
+              onClick={onExit}
+              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center flex-shrink-0"
+              aria-label="End navigation"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Bottom navigation bar */}
+      <motion.div
+        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+        className="absolute bottom-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-[min(560px,calc(100%-2rem))]"
+      >
+        <div className="rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/40 border border-white/40 overflow-hidden">
+          <div className="h-1 bg-slate-200">
+            <div className="h-full bg-[#1d7afc] transition-all" style={{ width: `${Math.min(100, progress * 100)}%` }} />
+          </div>
+          <div className="flex items-center gap-3 p-4">
+            <div>
+              <div className="text-2xl font-semibold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>
+                {remainingMin} min
+              </div>
+              <div className="text-xs text-slate-500">{remainingM} m · to {destination.name}</div>
+            </div>
+            <div className="flex-1" />
+            <div className="text-xs font-medium text-slate-500">
+              Step {Math.min(stepIdx + 1, totalSteps)} / {totalSteps}
+            </div>
+            <button
+              onClick={onTogglePlay}
+              className="w-10 h-10 rounded-full bg-slate-900 hover:bg-slate-700 text-white flex items-center justify-center"
+              aria-label={playing ? "Pause" : "Resume"}
+            >
+              {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  );
+}
