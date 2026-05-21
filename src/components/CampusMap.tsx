@@ -478,7 +478,7 @@ function MapBtn({
 
 function Sidebar({
   search, setSearch, filtered, from, to, setTo, openBuilding,
-  routeStyle, meters, walkTime,
+  routeStyle, meters, walkTime, steps, useMyLocation, geoStatus,
 }: {
   search: string; setSearch: (v: string) => void; filtered: Building[];
   from: Building; to: Building | null;
@@ -486,6 +486,9 @@ function Sidebar({
   openBuilding: (b: Building) => void;
   routeStyle: string; setRouteStyle: (v: any) => void;
   meters: number; walkTime: number;
+  steps: Step[];
+  useMyLocation: () => void;
+  geoStatus: "idle" | "locating" | "ok" | "off-campus" | "denied";
 }) {
   return (
     <aside className="hidden lg:flex flex-col w-[340px] bg-[#0d1c14] text-white/90 border-r border-white/10 overflow-y-auto no-scrollbar">
