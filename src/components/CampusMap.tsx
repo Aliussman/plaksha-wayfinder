@@ -28,6 +28,8 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   const [userPos, setUserPos] = useState<{ x: number; y: number } | null>(null);
   const [progress, setProgress] = useState(0); // 0..1 along route
   const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "ok" | "off-campus" | "denied">("idle");
+  const [algorithm, setAlgorithm] = useState<Algorithm>("dijkstra");
+  const [qrOpen, setQrOpen] = useState(false);
 
   // pan / zoom
   const [zoom, setZoom] = useState(1.05);
