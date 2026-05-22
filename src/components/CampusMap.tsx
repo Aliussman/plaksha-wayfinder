@@ -86,21 +86,28 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
     return Math.min(bestI, steps.length - 1);
   }, [steps, userPos]);
 
-  // Geolocation — gracefully maps lat/lng to campus or warns user
+  // Geolocation — watchPosition for live movement; snaps to nearest campus entry
   function useMyLocation() {
     if (!("geolocation" in navigator)) { setGeoStatus("denied"); return; }
     setGeoStatus("locating");
-    navigator.geolocation.getCurrentPosition(
+    const id = navigator.geolocation.watchPosition(
       () => {
-        // Real lat/lng cannot be mapped to this fictional 0-100 coordinate
-        // system, so we snap the user to the nearest known entry (Gate 01)
-        // and tag them as on-campus for a smooth experience.
+        // Real lat/lng cannot map into our normalized canvas; snap to Gate 01
         setFromId("gate");
         setGeoStatus("ok");
       },
       () => setGeoStatus("denied"),
-      { enableHighAccuracy: true, timeout: 6000 },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 },
     );
+    // Auto-stop after 60s to save battery
+    setTimeout(() => navigator.geolocation.clearWatch(id), 60000);
+  }
+
+  // QR checkpoint scan correction — snaps current node to a known checkpoint
+  function onScanCheckpoint(id: string) {
+    setFromId(id);
+    setQrOpen(false);
+    setGeoStatus("ok");
   }
 
   // Filter buildings
