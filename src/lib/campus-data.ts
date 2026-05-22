@@ -462,8 +462,8 @@ function nearestBuildingName(x: number, y: number): string | null {
   return best && bestD < 12 ? best.name.replace(/\s·.*$/, "") : null;
 }
 
-export function buildSteps(fromId: string, toId: string): Step[] {
-  const ids = findRouteIds(fromId, toId);
+export function buildSteps(fromId: string, toId: string, algo: Algorithm = "dijkstra"): Step[] {
+  const ids = findRouteIds(fromId, toId, algo);
   if (ids.length < 2) return [];
   const pts = ids.map((id) => nodeMap[id]);
   const fromBldg = buildings.find((b) => b.id === fromId);
