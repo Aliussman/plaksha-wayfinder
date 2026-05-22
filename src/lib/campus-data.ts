@@ -321,6 +321,23 @@ const edges: [string, string][] = [
   ["hostel2", "w_hostel_e"],
   ["w_hostel_e", "hostel3"],
   ["w_hostel_e", "w_dining"],
+  // New buildings wired into the graph
+  ["gate2", "w_hostel_w"],
+  ["gate2", "volleyball"],
+  ["volleyball", "w_field_s"],
+  ["mph", "w_field_s"],
+  ["mph", "w_field_e"],
+  ["junctionA", "w_bharti_n"],
+  ["junctionA", "w_havells"],
+  ["junctionA", "bharti"],
+  ["junctionB", "w_audi"],
+  ["junctionB", "w_bharti_s"],
+  ["junctionB", "hyfc"],
+  ["hyfc", "auditorium"],
+  ["hyfc", "w_courts"],
+  ["csai", "w_bharti_s"],
+  ["csai", "library"],
+  ["csai", "junctionB"],
 ];
 
 type Node = { id: string; x: number; y: number };
