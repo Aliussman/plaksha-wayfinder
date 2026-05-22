@@ -4,11 +4,11 @@ import {
   Navigation2, X, ZoomIn, ZoomOut, Locate, Search, Clock, Footprints,
   Accessibility, MapPin, Compass, Crosshair, Layers, Route as RouteIcon,
   ChevronRight, ArrowUp, ArrowUpLeft, ArrowUpRight, CornerUpLeft, CornerUpRight,
-  Flag, Play, Pause,
+  Flag, Play, Pause, QrCode, Cpu,
 } from "lucide-react";
 import {
   buildings, waypoints, type Building, findRoute, pathToSvgD, routeDistance,
-  buildSteps, type Step,
+  buildSteps, type Step, qrCheckpoints, type Algorithm,
 } from "@/lib/campus-data";
 import satelliteImg from "@/assets/campus-satellite.png";
 import { cn } from "@/lib/utils";
