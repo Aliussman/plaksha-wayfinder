@@ -363,14 +363,6 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
           </div>
         )}
 
-        {/* ---- Right map controls ---- */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
-          <MapBtn onClick={() => setZoom((z) => Math.min(3, z + 0.25))}><ZoomIn className="w-4 h-4" /></MapBtn>
-          <MapBtn onClick={() => setZoom((z) => Math.max(0.8, z - 0.25))}><ZoomOut className="w-4 h-4" /></MapBtn>
-          <MapBtn onClick={recenter} title="Recenter"><Locate className="w-4 h-4" /></MapBtn>
-          <MapBtn onClick={() => setShowLabels((v) => !v)} active={showLabels} title="Labels"><Layers className="w-4 h-4" /></MapBtn>
-          <MapBtn onClick={() => setTracking((v) => !v)} active={tracking} title="Live tracking"><Crosshair className="w-4 h-4" /></MapBtn>
-        </div>
 
         {/* ---- Right map controls ---- */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
