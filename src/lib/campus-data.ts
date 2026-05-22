@@ -354,16 +354,15 @@ for (const [a, b] of edges) {
   (adj[b] ??= []).push({ to: a, w: d });
 }
 
-// Dijkstra → ordered list of node ids
-export function findRouteIds(fromId: string, toId: string): string[] {
+// Pathfinding algorithm selector
+export type Algorithm = "dijkstra" | "astar";
+
+function dijkstra(fromId: string, toId: string): string[] {
   if (!nodeMap[fromId] || !nodeMap[toId]) return [];
   const dist: Record<string, number> = {};
   const prev: Record<string, string | null> = {};
   const visited = new Set<string>();
-  for (const id of Object.keys(nodeMap)) {
-    dist[id] = Infinity;
-    prev[id] = null;
-  }
+  for (const id of Object.keys(nodeMap)) { dist[id] = Infinity; prev[id] = null; }
   dist[fromId] = 0;
   const queue = new Set(Object.keys(nodeMap));
   while (queue.size) {
@@ -386,8 +385,62 @@ export function findRouteIds(fromId: string, toId: string): string[] {
   return path;
 }
 
-export function findRoute(fromId: string, toId: string): { x: number; y: number }[] {
-  return findRouteIds(fromId, toId).map((id) => ({ x: nodeMap[id].x, y: nodeMap[id].y }));
+// A* with Euclidean heuristic
+function astar(fromId: string, toId: string): string[] {
+  if (!nodeMap[fromId] || !nodeMap[toId]) return [];
+  const goal = nodeMap[toId];
+  const h = (id: string) => Math.hypot(nodeMap[id].x - goal.x, nodeMap[id].y - goal.y);
+  const g: Record<string, number> = {};
+  const f: Record<string, number> = {};
+  const prev: Record<string, string | null> = {};
+  for (const id of Object.keys(nodeMap)) { g[id] = Infinity; f[id] = Infinity; prev[id] = null; }
+  g[fromId] = 0; f[fromId] = h(fromId);
+  const open = new Set([fromId]);
+  const closed = new Set<string>();
+  while (open.size) {
+    let u: string | null = null;
+    let best = Infinity;
+    for (const id of open) if (f[id] < best) { best = f[id]; u = id; }
+    if (!u) break;
+    if (u === toId) break;
+    open.delete(u); closed.add(u);
+    for (const { to, w } of adj[u] ?? []) {
+      if (closed.has(to)) continue;
+      const tentative = g[u] + w;
+      if (tentative < g[to]) {
+        prev[to] = u; g[to] = tentative; f[to] = tentative + h(to);
+        open.add(to);
+      }
+    }
+  }
+  const path: string[] = [];
+  let cur: string | null = toId;
+  while (cur) { path.unshift(cur); cur = prev[cur]; }
+  if (path[0] !== fromId) return [];
+  return path;
+}
+
+export function findRouteIds(fromId: string, toId: string, algo: Algorithm = "dijkstra"): string[] {
+  return algo === "astar" ? astar(fromId, toId) : dijkstra(fromId, toId);
+}
+
+export function findRoute(fromId: string, toId: string, algo: Algorithm = "dijkstra"): { x: number; y: number }[] {
+  return findRouteIds(fromId, toId, algo).map((id) => ({ x: nodeMap[id].x, y: nodeMap[id].y }));
+}
+
+// QR checkpoints — scanning one snaps the user to that node
+export const qrCheckpoints = [
+  "gate", "gate2", "junctionA", "junctionB", "havells", "bharti", "library", "dining", "hyfc",
+];
+
+export function nearestBuildingId(x: number, y: number): string {
+  let best = buildings[0].id;
+  let bestD = Infinity;
+  for (const b of buildings) {
+    const d = Math.hypot(b.x - x, b.y - y);
+    if (d < bestD) { bestD = d; best = b.id; }
+  }
+  return best;
 }
 
 // Turn-by-turn step generator (Google Maps-style)
