@@ -40,11 +40,11 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
   const from = buildings.find((b) => b.id === fromId)!;
   const to = toId ? buildings.find((b) => b.id === toId) ?? null : null;
 
-  const route = useMemo(() => (to ? findRoute(from.id, to.id) : []), [from, to]);
+  const route = useMemo(() => (to ? findRoute(from.id, to.id, algorithm) : []), [from, to, algorithm]);
   const routeD = useMemo(() => pathToSvgD(route), [route]);
   const meters = useMemo(() => (route.length ? routeDistance(route) : 0), [route]);
   const walkTime = Math.max(1, Math.round(meters / 75));
-  const steps = useMemo<Step[]>(() => (to ? buildSteps(from.id, to.id) : []), [from, to]);
+  const steps = useMemo<Step[]>(() => (to ? buildSteps(from.id, to.id, algorithm) : []), [from, to, algorithm]);
 
   const routeColor =
     routeStyle === "accessible" ? "#22c55e" :
