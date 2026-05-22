@@ -372,6 +372,85 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
           <MapBtn onClick={() => setTracking((v) => !v)} active={tracking} title="Live tracking"><Crosshair className="w-4 h-4" /></MapBtn>
         </div>
 
+        {/* ---- Right map controls ---- */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
+          <MapBtn onClick={() => setZoom((z) => Math.min(3, z + 0.25))}><ZoomIn className="w-4 h-4" /></MapBtn>
+          <MapBtn onClick={() => setZoom((z) => Math.max(0.8, z - 0.25))}><ZoomOut className="w-4 h-4" /></MapBtn>
+          <MapBtn onClick={recenter} title="Recenter"><Locate className="w-4 h-4" /></MapBtn>
+          <MapBtn onClick={() => setShowLabels((v) => !v)} active={showLabels} title="Labels"><Layers className="w-4 h-4" /></MapBtn>
+          <MapBtn onClick={() => setTracking((v) => !v)} active={tracking} title="Live tracking"><Crosshair className="w-4 h-4" /></MapBtn>
+          <MapBtn onClick={() => setQrOpen(true)} title="Scan QR checkpoint"><QrCode className="w-4 h-4" /></MapBtn>
+          <MapBtn
+            onClick={() => setAlgorithm((a) => (a === "dijkstra" ? "astar" : "dijkstra"))}
+            title={`Pathfinding · ${algorithm === "dijkstra" ? "Dijkstra" : "A*"}`}
+          >
+            <Cpu className="w-4 h-4" />
+          </MapBtn>
+        </div>
+
+        {/* Algorithm badge */}
+        <div className="absolute left-4 bottom-4 hidden md:block">
+          <div className="rounded-xl bg-black/55 backdrop-blur border border-white/15 text-white px-3 py-1.5 text-[11px] flex items-center gap-2 shadow-xl">
+            <Cpu className="w-3.5 h-3.5 text-[#1d7afc]" />
+            <span className="uppercase tracking-widest opacity-70">Algo</span>
+            <span className="font-semibold">{algorithm === "dijkstra" ? "Dijkstra" : "A*"}</span>
+            {route.length > 0 && <span className="opacity-60">· {route.length} nodes</span>}
+          </div>
+        </div>
+
+        {/* QR Checkpoint sheet */}
+        <AnimatePresence>
+          {qrOpen && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setQrOpen(false)}
+              className="absolute inset-0 z-30 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            >
+              <motion.div
+                initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md rounded-3xl bg-white shadow-2xl p-5"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">QR Checkpoint</div>
+                    <div className="text-lg font-semibold text-slate-900">Snap to a known location</div>
+                  </div>
+                  <button onClick={() => setQrOpen(false)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
+                    <X className="w-4 h-4 text-slate-700" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                  When GPS drifts indoors, scan the nearest QR to instantly correct your position on the map.
+                </p>
+                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+                  {qrCheckpoints.map((id) => {
+                    const b = buildings.find((x) => x.id === id);
+                    if (!b) return null;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => onScanCheckpoint(id)}
+                        className="text-left p-3 rounded-xl border border-slate-200 hover:border-[#1d7afc] hover:bg-[#1d7afc]/5 transition"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-[#1d7afc]/10 text-[#1d7afc] flex items-center justify-center">
+                            <QrCode className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-900 truncate">{b.name}</div>
+                            <div className="text-[10px] text-slate-500 capitalize">{b.category}</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Compass */}
         <div className="absolute left-4 top-4 hidden md:flex flex-col items-center gap-1">
           <div className="w-11 h-11 rounded-full bg-black/55 backdrop-blur border border-white/15 flex items-center justify-center text-white shadow-xl">
