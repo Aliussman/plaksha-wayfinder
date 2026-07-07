@@ -7,10 +7,10 @@ import {
   Flag, Play, Pause, QrCode, Cpu,
 } from "lucide-react";
 import {
-  buildings, waypoints, type Building, findRoute, pathToSvgD, routeDistance,
+  buildings, waypoints, type Building, findRoute, findRouteIds, pathToSvgD, routeDistance,
   buildSteps, type Step, qrCheckpoints, type Algorithm,
+  edges, nodePos,
 } from "@/lib/campus-data";
-import satelliteImg from "@/assets/campus-satellite.png";
 import { cn } from "@/lib/utils";
 
 type Props = { initialFromId?: string };
