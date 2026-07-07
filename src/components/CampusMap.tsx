@@ -514,7 +514,12 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
               <div className="relative aspect-square bg-[radial-gradient(ellipse_at_50%_40%,#12362a_0%,#0a1f15_70%)]">
                 <div className="absolute inset-0 bg-black/10" />
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-                  {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.4" fill="none" />}
+                  {edges.map((e, i) => {
+                    const a = nodePos(e.a), b = nodePos(e.b);
+                    if (!a || !b) return null;
+                    return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d9f0e2" strokeWidth="0.6" opacity="0.55" strokeLinecap="round" />;
+                  })}
+                  {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.6" fill="none" strokeLinecap="round" />}
                   <circle cx={from.x} cy={from.y} r="1.6" fill="#22c55e" stroke="#fff" strokeWidth="0.4" />
                   {to && <circle cx={to.x} cy={to.y} r="1.6" fill={routeColor} stroke="#fff" strokeWidth="0.4" />}
                   {userPos && <circle cx={userPos.x} cy={userPos.y} r="1.2" fill="#1d7afc" stroke="#fff" strokeWidth="0.4" />}
