@@ -457,9 +457,8 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
         {!navMode && (
           <div className="absolute bottom-4 right-4 hidden sm:block">
             <div className="w-44 rounded-2xl overflow-hidden border border-white/15 shadow-2xl shadow-black/40">
-              <div className="relative aspect-square">
-                <img src={satelliteImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30" />
+              <div className="relative aspect-square bg-[radial-gradient(ellipse_at_50%_40%,#12362a_0%,#0a1f15_70%)]">
+                <div className="absolute inset-0 bg-black/10" />
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
                   {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.4" fill="none" />}
                   <circle cx={from.x} cy={from.y} r="1.6" fill="#22c55e" stroke="#fff" strokeWidth="0.4" />
