@@ -211,14 +211,68 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
               </radialGradient>
             </defs>
 
-            {/* Waypoint hints — only when no active route, to keep map clean */}
-            {!route.length && (
-              <g>
-                {waypoints.map((w) => (
-                  <circle key={w.id} cx={w.x} cy={w.y} r="0.3" fill="#ffffff60" />
-                ))}
-              </g>
-            )}
+            {/* --- Campus road network (from handwritten map) --- */}
+            <g>
+              {/* Cased "asphalt" — wide dark stroke */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`road-case-${i}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#0a1f15" strokeWidth="2.4"
+                    strokeLinecap="round" opacity="0.9"
+                  />
+                );
+              })}
+              {/* Path surface — light stroke */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`road-surf-${i}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#d9f0e2" strokeWidth="1.4"
+                    strokeLinecap="round" opacity="0.55"
+                  />
+                );
+              })}
+              {/* Dashed center-line for a proper "walkway" feel */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`road-dash-${i}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#ffffff" strokeWidth="0.18"
+                    strokeDasharray="0.9 0.9" opacity="0.6"
+                  />
+                );
+              })}
+              {/* Waypoint & junction dots */}
+              {waypoints.map((w) => (
+                <circle key={w.id} cx={w.x} cy={w.y} r="0.45" fill="#e6ffe9" opacity="0.55" />
+              ))}
+              {/* Edge distance labels (visible on zoom) */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                const mx = (a.x + b.x) / 2;
+                const my = (a.y + b.y) / 2;
+                return (
+                  <text
+                    key={`w-${i}`} x={mx} y={my - 0.5}
+                    fontSize="1.25" textAnchor="middle"
+                    fill="#a7f3d0" opacity="0.55" fontWeight="600"
+                  >
+                    {e.w}m
+                  </text>
+                );
+              })}
+            </g>
 
             {/* Active route — Google Maps style with white casing */}
             {routeD && (
