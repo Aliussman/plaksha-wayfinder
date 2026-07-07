@@ -181,16 +181,18 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
             transition: dragRef.current ? "none" : "transform 0.35s cubic-bezier(.2,.7,.2,1)",
           }}
         >
-          {/* Softened satellite base for cleaner cartography feel */}
-          <div className="absolute inset-0">
-            <img
-              src={satelliteImg}
-              alt="Plaksha University campus satellite map"
-              className="w-full h-full object-cover"
-              style={{ filter: "saturate(0.7) brightness(0.95) contrast(1.05)" }}
-              draggable={false}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0e2a1c]/35 via-[#0e2a1c]/10 to-[#0a1f15]/40" />
+          {/* Clean digital campus canvas (dark green + subtle grid) */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,#12362a_0%,#0a1f15_60%,#060f0b_100%)]" />
+            <svg className="absolute inset-0 w-full h-full opacity-[0.18]" preserveAspectRatio="none" viewBox="0 0 100 100">
+              <defs>
+                <pattern id="campusGrid" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                  <path d="M 4 0 L 0 0 0 4" fill="none" stroke="#a7f3d0" strokeWidth="0.08" />
+                </pattern>
+              </defs>
+              <rect width="100" height="100" fill="url(#campusGrid)" />
+            </svg>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050c08]/70" />
           </div>
 
           {/* SVG overlay */}
