@@ -7,10 +7,10 @@ import {
   Flag, Play, Pause, QrCode, Cpu,
 } from "lucide-react";
 import {
-  buildings, waypoints, type Building, findRoute, pathToSvgD, routeDistance,
+  buildings, waypoints, type Building, findRoute, findRouteIds, pathToSvgD, routeDistance,
   buildSteps, type Step, qrCheckpoints, type Algorithm,
+  edges, nodePos,
 } from "@/lib/campus-data";
-import satelliteImg from "@/assets/campus-satellite.png";
 import { cn } from "@/lib/utils";
 
 type Props = { initialFromId?: string };
@@ -181,16 +181,18 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
             transition: dragRef.current ? "none" : "transform 0.35s cubic-bezier(.2,.7,.2,1)",
           }}
         >
-          {/* Softened satellite base for cleaner cartography feel */}
-          <div className="absolute inset-0">
-            <img
-              src={satelliteImg}
-              alt="Plaksha University campus satellite map"
-              className="w-full h-full object-cover"
-              style={{ filter: "saturate(0.7) brightness(0.95) contrast(1.05)" }}
-              draggable={false}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0e2a1c]/35 via-[#0e2a1c]/10 to-[#0a1f15]/40" />
+          {/* Clean digital campus canvas (dark green + subtle grid) */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,#12362a_0%,#0a1f15_60%,#060f0b_100%)]" />
+            <svg className="absolute inset-0 w-full h-full opacity-[0.18]" preserveAspectRatio="none" viewBox="0 0 100 100">
+              <defs>
+                <pattern id="campusGrid" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                  <path d="M 4 0 L 0 0 0 4" fill="none" stroke="#a7f3d0" strokeWidth="0.08" />
+                </pattern>
+              </defs>
+              <rect width="100" height="100" fill="url(#campusGrid)" />
+            </svg>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050c08]/70" />
           </div>
 
           {/* SVG overlay */}
@@ -209,14 +211,68 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
               </radialGradient>
             </defs>
 
-            {/* Waypoint hints — only when no active route, to keep map clean */}
-            {!route.length && (
-              <g>
-                {waypoints.map((w) => (
-                  <circle key={w.id} cx={w.x} cy={w.y} r="0.3" fill="#ffffff60" />
-                ))}
-              </g>
-            )}
+            {/* --- Campus road network (from handwritten map) --- */}
+            <g>
+              {/* Cased "asphalt" — wide dark stroke */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`road-case-${i}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#0a1f15" strokeWidth="2.4"
+                    strokeLinecap="round" opacity="0.9"
+                  />
+                );
+              })}
+              {/* Path surface — light stroke */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`road-surf-${i}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#d9f0e2" strokeWidth="1.4"
+                    strokeLinecap="round" opacity="0.55"
+                  />
+                );
+              })}
+              {/* Dashed center-line for a proper "walkway" feel */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`road-dash-${i}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#ffffff" strokeWidth="0.18"
+                    strokeDasharray="0.9 0.9" opacity="0.6"
+                  />
+                );
+              })}
+              {/* Waypoint & junction dots */}
+              {waypoints.map((w) => (
+                <circle key={w.id} cx={w.x} cy={w.y} r="0.45" fill="#e6ffe9" opacity="0.55" />
+              ))}
+              {/* Edge distance labels (visible on zoom) */}
+              {edges.map((e, i) => {
+                const a = nodePos(e.a), b = nodePos(e.b);
+                if (!a || !b) return null;
+                const mx = (a.x + b.x) / 2;
+                const my = (a.y + b.y) / 2;
+                return (
+                  <text
+                    key={`w-${i}`} x={mx} y={my - 0.5}
+                    fontSize="1.25" textAnchor="middle"
+                    fill="#a7f3d0" opacity="0.55" fontWeight="600"
+                  >
+                    {e.w}m
+                  </text>
+                );
+              })}
+            </g>
 
             {/* Active route — Google Maps style with white casing */}
             {routeD && (
@@ -455,11 +511,15 @@ export function CampusMap({ initialFromId = "gate" }: Props) {
         {!navMode && (
           <div className="absolute bottom-4 right-4 hidden sm:block">
             <div className="w-44 rounded-2xl overflow-hidden border border-white/15 shadow-2xl shadow-black/40">
-              <div className="relative aspect-square">
-                <img src={satelliteImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30" />
+              <div className="relative aspect-square bg-[radial-gradient(ellipse_at_50%_40%,#12362a_0%,#0a1f15_70%)]">
+                <div className="absolute inset-0 bg-black/10" />
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-                  {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.4" fill="none" />}
+                  {edges.map((e, i) => {
+                    const a = nodePos(e.a), b = nodePos(e.b);
+                    if (!a || !b) return null;
+                    return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d9f0e2" strokeWidth="0.6" opacity="0.55" strokeLinecap="round" />;
+                  })}
+                  {routeD && <path d={routeD} stroke={routeColor} strokeWidth="1.6" fill="none" strokeLinecap="round" />}
                   <circle cx={from.x} cy={from.y} r="1.6" fill="#22c55e" stroke="#fff" strokeWidth="0.4" />
                   {to && <circle cx={to.x} cy={to.y} r="1.6" fill={routeColor} stroke="#fff" strokeWidth="0.4" />}
                   {userPos && <circle cx={userPos.x} cy={userPos.y} r="1.2" fill="#1d7afc" stroke="#fff" strokeWidth="0.4" />}
