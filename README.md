@@ -23,22 +23,22 @@ Plaksha WayFinder provides a web-based navigation experience where users can:
 
 ## Key Features
 
-- QR-based access system
-- Web-based navigation platform
-- Mobile-friendly interface
-- Simple and accessible user experience
-- Designed for campus-wide usability
+- QR-based access system for campus checkpoints
+- Web-based navigation with no app installation required
+- Interactive campus map with GPS-aware positioning
+- Turn-by-turn routes with multiple pathfinding options
+- Mobile-friendly interface for students, visitors, and new members
 
 ## My Role
 
-### Team Leader
+### Team Leader, System Design, and Frontend
 
-As the team leader, I was responsible for:
+I led the project from the initial concept through deployment.
 
-- Coordinating the project development process
-- Collaborating with team members on planning and implementation
-- Managing project workflow and progress
-- Contributing to problem-solving and technical decisions
+- Defined the campus navigation problem and overall product direction
+- Designed the public navigation experience, campus data model, and routing flow
+- Implemented the main React interface, QR checkpoint flow, GPS positioning, and route visualization
+- Coordinated the team, planned the work, and made the main technical decisions
 
 ## Impact
 
@@ -46,7 +46,8 @@ The project demonstrates how technology can be applied to solve practical proble
 
 ## Technology Stack
 
-- Frontend: React / Next.js
+- Frontend: React, TypeScript, and TanStack Start
+- Bundler: Vite
 - Styling: Tailwind CSS
 - Deployment: Vercel
 - Version Control: Git & GitHub
@@ -62,7 +63,7 @@ Possible future enhancements:
 - Interactive campus map integration
 - Real-time location guidance
 - Accessibility improvements
-- Administrative dashboard for managing locations
+- Administrative dashboard for managing locations and generating QR codes
 
 ## Project Team
 
